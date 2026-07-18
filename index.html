@@ -1,0 +1,2261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acrobat Voice — Voice-First Prototype</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #E8E8E6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Device bezel ── */
+  .device {
+    width: 390px;
+    height: 844px;
+    background: #FFFFFF;
+    border-radius: 44px;
+    box-shadow: 0 0 0 8px #1a1a1a, 0 0 0 10px #333, 0 24px 80px rgba(0,0,0,.25);
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Top bar ── */
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 56px 20px 12px;
+    flex-shrink: 0;
+  }
+  .top-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .acrobat-mark {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+  }
+  .top-bar-label {
+    font-size: 15px;
+    font-weight: 500;
+    color: #171717;
+  }
+  .top-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .history-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #F0F0EE;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .history-btn:active { background: #E5F1FC; }
+  .history-btn svg { width: 16px; height: 16px; color: #999994; }
+  .account-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #F0F0EE;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .account-circle svg { width: 16px; height: 16px; color: #999994; }
+
+  /* ── Chat history overlay ── */
+  .history-overlay {
+    position: absolute;
+    inset: 0;
+    background: #FFFFFF;
+    z-index: 20;
+    display: none;
+    flex-direction: column;
+  }
+  .history-overlay.visible { display: flex; }
+  .history-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 56px 20px 12px;
+    flex-shrink: 0;
+  }
+  .history-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #171717;
+  }
+  .history-close {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #F0F0EE;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .history-close:active { background: #E5F1FC; }
+  .history-close svg { width: 16px; height: 16px; color: #6B6B66; }
+  .history-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+  }
+  .history-empty {
+    text-align: center;
+    color: #999994;
+    font-size: 14px;
+    padding: 40px 20px;
+  }
+  .history-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 20px;
+    cursor: pointer;
+    border-bottom: 0.5px solid #F0F0EE;
+  }
+  .history-item:active { background: #F9F8F6; }
+  .history-item-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #E5F1FC;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .history-item-icon svg { width: 16px; height: 16px; color: #378ADD; }
+  .history-item-content { flex: 1; min-width: 0; }
+  .history-item-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: #171717;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .history-item-reply {
+    font-size: 13px;
+    color: #6B6B66;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .history-item-time {
+    font-size: 12px;
+    color: #999994;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .new-chat-fab {
+    position: absolute;
+    bottom: 28px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #378ADD;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(55,138,221,0.3);
+  }
+  .new-chat-fab:active { background: #2a6db5; }
+  .new-chat-fab svg { width: 24px; height: 24px; color: #FFFFFF; }
+
+  /* ── Agent zone (scrollable middle) ── */
+  .agent-zone {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-y: auto;
+    padding: 0 20px;
+    position: relative;
+  }
+
+  /* ── Orb ── */
+  .orb-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 24px 0 16px;
+    flex-shrink: 0;
+  }
+  canvas#orb {
+    width: 200px;
+    height: 200px;
+  }
+
+  /* ── Welcome / greeting ── */
+  .greeting {
+    font-size: 24px;
+    font-weight: 500;
+    color: #171717;
+    text-align: center;
+    padding: 0 16px 8px;
+    line-height: 1.3;
+    transition: opacity .3s;
+    flex-shrink: 0;
+  }
+  .greeting-sub {
+    font-size: 14px;
+    color: #6B6B66;
+    text-align: center;
+    padding-bottom: 16px;
+    transition: opacity .3s;
+    flex-shrink: 0;
+  }
+
+  /* ── Transcript ── */
+  .transcript {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding-bottom: 8px;
+    flex-shrink: 0;
+  }
+  .bubble {
+    max-width: 82%;
+    padding: 10px 14px;
+    font-size: 14px;
+    line-height: 1.45;
+    color: #171717;
+    animation: bubbleIn .25s ease-out;
+  }
+  @keyframes bubbleIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .bubble.agent {
+    align-self: flex-start;
+    background: #F9F8F6;
+    border-radius: 14px 14px 14px 4px;
+  }
+  .bubble.user {
+    align-self: flex-end;
+    background: #E5F1FC;
+    color: #05457D;
+    border-radius: 14px 14px 4px 14px;
+  }
+  .bubble .partial {
+    color: #999994;
+  }
+
+  /* ── Live transcript (under waveform) ── */
+  .live-transcript {
+    font-size: 18px;
+    font-weight: 400;
+    color: #171717;
+    text-align: center;
+    padding: 0 24px 16px;
+    line-height: 1.5;
+    min-height: 0;
+    transition: opacity .3s;
+    flex-shrink: 0;
+  }
+  .live-transcript:empty {
+    display: none;
+  }
+  .live-transcript .partial {
+    color: #999994;
+  }
+
+  /* ── Hint chips ── */
+  .chips-area {
+    width: 100%;
+    flex-shrink: 0;
+    padding: 8px 0 12px;
+    transition: opacity .4s, transform .4s;
+    overflow: hidden;
+  }
+  .chips-area.hidden {
+    opacity: 0;
+    transform: translateY(8px);
+    pointer-events: none;
+  }
+  .chips-row {
+    display: flex;
+    gap: 8px;
+    padding-bottom: 10px;
+    white-space: nowrap;
+    width: max-content;
+    animation: scrollChips 35s linear infinite;
+  }
+  .chips-row:nth-child(2) {
+    animation: scrollChips 35s linear infinite;
+  }
+  @keyframes scrollChips {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .chip {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: #F9F8F6;
+    border: 0.5px solid #DEDEDB;
+    border-radius: 20px;
+    font-size: 13px;
+    color: #171717;
+    cursor: pointer;
+    transition: background .15s, box-shadow .15s;
+    white-space: nowrap;
+    user-select: none;
+  }
+  .chip:active { background: #E5F1FC; }
+  .chip svg {
+    width: 14px;
+    height: 14px;
+    color: #6B6B66;
+    flex-shrink: 0;
+  }
+
+  /* ── Docked icon bar ── */
+  .voice-bar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 28px 32px;
+    background: #FFFFFF;
+  }
+  .bar-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #F9F8F6;
+    border: 0.5px solid #DEDEDB;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background .15s;
+    flex-shrink: 0;
+  }
+  .bar-btn:active { background: #E5F1FC; }
+  .bar-btn svg { width: 20px; height: 20px; color: #6B6B66; }
+
+  /* ── Recents sheet ── */
+  .recents-sheet-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.15);
+    z-index: 14;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s;
+  }
+  .recents-sheet-backdrop.visible { opacity: 1; pointer-events: auto; }
+  .recents-sheet {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 66%;
+    background: #FFFFFF;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -4px 24px rgba(0,0,0,.1);
+    z-index: 15;
+    display: none;
+    flex-direction: column;
+  }
+  .recents-sheet.visible { display: flex; }
+  .recents-sheet-handle {
+    width: 36px;
+    height: 4px;
+    background: #DEDEDB;
+    border-radius: 2px;
+    margin: 10px auto;
+    flex-shrink: 0;
+  }
+  .recents-sheet-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #171717;
+    padding: 4px 20px 12px;
+  }
+  .recents-sheet-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 20px 20px;
+  }
+  .recents-sheet-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 0.5px solid #DEDEDB;
+    cursor: pointer;
+  }
+  .recents-sheet-item:last-child { border-bottom: none; }
+  .recents-sheet-item:active { background: #F9F8F6; }
+  .recents-sheet-icon {
+    width: 40px;
+    height: 40px;
+    background: #FFF0EB;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .recents-sheet-icon svg { width: 18px; height: 18px; color: #D85A30; }
+  .recents-sheet-info { flex: 1; }
+  .recents-sheet-name { font-size: 14px; color: #171717; font-weight: 500; }
+  .recents-sheet-meta { font-size: 12px; color: #999994; margin-top: 2px; }
+
+  /* ── Type mode overlay ── */
+  .type-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #FFFFFF;
+    border-top: 0.5px solid #DEDEDB;
+    padding: 12px 20px 32px;
+    display: none;
+    align-items: center;
+    gap: 10px;
+    z-index: 10;
+  }
+  .type-overlay.visible { display: flex; }
+  .type-input {
+    flex: 1;
+    height: 40px;
+    border: 0.5px solid #DEDEDB;
+    border-radius: 20px;
+    padding: 0 16px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    background: #F9F8F6;
+    color: #171717;
+  }
+  .type-input::placeholder { color: #999994; }
+  .type-input:focus { border-color: #378ADD; }
+  .type-send {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #378ADD;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .type-send svg { width: 16px; height: 16px; color: #fff; }
+  .type-close {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #F9F8F6;
+    border: 0.5px solid #DEDEDB;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .type-close svg { width: 16px; height: 16px; color: #6B6B66; }
+
+  /* ── Grid / show-everything overlay ── */
+  .grid-overlay {
+    position: absolute;
+    inset: 0;
+    background: #FFFFFF;
+    z-index: 20;
+    display: none;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .grid-overlay.visible { display: flex; }
+
+  .grid-top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 56px 20px 12px;
+    flex-shrink: 0;
+  }
+  .grid-close {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #F9F8F6;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .grid-close svg { width: 16px; height: 16px; color: #6B6B66; }
+
+  .grid-section-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #999994;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    padding: 16px 20px 8px;
+  }
+
+  .template-rail {
+    display: flex;
+    gap: 10px;
+    padding: 0 20px 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .template-rail::-webkit-scrollbar { display: none; }
+  .template-card {
+    width: 100px;
+    height: 130px;
+    background: #F9F8F6;
+    border-radius: 12px;
+    border: 0.5px solid #DEDEDB;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .template-card svg { width: 24px; height: 24px; color: #999994; }
+  .template-card span { font-size: 11px; color: #6B6B66; }
+
+  .recents-list { padding: 0 20px; }
+  .recent-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 0.5px solid #DEDEDB;
+  }
+  .recent-icon {
+    width: 40px;
+    height: 40px;
+    background: #FFF0EB;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .recent-icon svg { width: 18px; height: 18px; color: #D85A30; }
+  .recent-info { flex: 1; }
+  .recent-name { font-size: 14px; color: #171717; font-weight: 500; }
+  .recent-meta { font-size: 12px; color: #999994; margin-top: 2px; }
+
+  .grid-tab-bar {
+    display: flex;
+    justify-content: space-around;
+    padding: 12px 0 28px;
+    border-top: 0.5px solid #DEDEDB;
+    margin-top: auto;
+    flex-shrink: 0;
+    background: #fff;
+  }
+  .grid-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: #999994;
+  }
+  .grid-tab.active { color: #378ADD; }
+  .grid-tab svg { width: 20px; height: 20px; }
+
+  /* ── HITL: file picker sheet ── */
+  .picker-sheet {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 55%;
+    background: #FFFFFF;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -4px 20px rgba(0,0,0,.08);
+    z-index: 15;
+    display: none;
+    flex-direction: column;
+  }
+  .picker-sheet.visible { display: flex; }
+  .picker-handle {
+    width: 36px;
+    height: 4px;
+    background: #DEDEDB;
+    border-radius: 2px;
+    margin: 10px auto;
+    flex-shrink: 0;
+  }
+  .picker-title {
+    font-size: 15px;
+    font-weight: 500;
+    color: #171717;
+    padding: 4px 20px 12px;
+  }
+  .picker-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 20px;
+  }
+  .picker-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 0.5px solid #DEDEDB;
+    cursor: pointer;
+  }
+  .picker-item:active { background: #F9F8F6; }
+
+  /* ── HITL: permission prompt ── */
+  .permission-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,.35);
+    z-index: 25;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s;
+  }
+  .permission-overlay.visible { opacity: 1; pointer-events: auto; }
+  .permission-card {
+    width: 300px;
+    background: #fff;
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+  }
+  .permission-card svg { width: 40px; height: 40px; color: #378ADD; margin-bottom: 12px; }
+  .permission-card h3 { font-size: 16px; font-weight: 600; color: #171717; margin-bottom: 6px; }
+  .permission-card p { font-size: 13px; color: #6B6B66; line-height: 1.4; margin-bottom: 18px; }
+  .permission-card button {
+    width: 100%;
+    padding: 12px;
+    border-radius: 12px;
+    border: none;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .perm-allow { background: #378ADD; color: #fff; margin-bottom: 8px; }
+  .perm-deny { background: #F9F8F6; color: #6B6B66; border: 0.5px solid #DEDEDB; }
+
+  /* ── State switcher (prototype control) ── */
+  .state-switcher {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 100;
+  }
+  .state-switcher button {
+    padding: 6px 12px;
+    font-size: 11px;
+    font-family: 'Inter', sans-serif;
+    border: 1px solid #DEDEDB;
+    border-radius: 8px;
+    background: #fff;
+    color: #6B6B66;
+    cursor: pointer;
+    text-align: left;
+    transition: all .15s;
+  }
+  .state-switcher button:hover { background: #F9F8F6; }
+  .state-switcher button.active {
+    background: #05457D;
+    color: #fff;
+    border-color: #05457D;
+  }
+  .state-switcher .label {
+    font-size: 10px;
+    font-weight: 600;
+    color: #999994;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    padding: 4px 0 2px;
+  }
+
+  /* ── Document viewer ── */
+  .doc-viewer {
+    position: absolute;
+    inset: 0;
+    background: #FFFFFF;
+    z-index: 25;
+    display: none;
+    flex-direction: column;
+  }
+  .doc-viewer.visible { display: flex; }
+  .doc-top-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 56px 16px 12px;
+    flex-shrink: 0;
+    border-bottom: 0.5px solid #DEDEDB;
+  }
+  .doc-back {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: none;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .doc-back:active { background: #F0F0EE; }
+  .doc-back svg { width: 20px; height: 20px; color: #171717; }
+  .doc-filename {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 500;
+    color: #171717;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .doc-actions {
+    display: flex;
+    gap: 4px;
+  }
+  .doc-action-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: none;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .doc-action-btn:active { background: #F0F0EE; }
+  .doc-action-btn svg { width: 18px; height: 18px; color: #6B6B66; }
+  .doc-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 20px 100px;
+    background: #F9F8F6;
+  }
+  .doc-page {
+    background: #FFFFFF;
+    border-radius: 4px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    padding: 32px 24px;
+    max-width: 100%;
+  }
+  .doc-page-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #171717;
+    margin-bottom: 16px;
+    line-height: 1.3;
+  }
+  .doc-page-subtitle {
+    font-size: 14px;
+    font-weight: 500;
+    color: #6B6B66;
+    margin-bottom: 12px;
+  }
+  .doc-page p {
+    font-size: 13px;
+    color: #333;
+    line-height: 1.7;
+    margin-bottom: 14px;
+  }
+  .doc-highlight {
+    background: #FFF3CD;
+    padding: 1px 3px;
+    border-radius: 2px;
+  }
+
+  /* ── Collapsed voice pill (floating, ambient) ── */
+  .voice-pill {
+    position: absolute;
+    bottom: 20px;
+    left: 16px;
+    right: 16px;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 28px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    cursor: pointer;
+    z-index: 26;
+    border: 1px solid transparent;
+    background-clip: padding-box;
+    overflow: visible;
+  }
+  .voice-pill::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 30px;
+    background: linear-gradient(90deg, #7DB8E8, #378ADD, #2672C0, #378ADD, #7DB8E8);
+    background-size: 300% 100%;
+    animation: borderFlow 4s linear infinite;
+    z-index: -2;
+    opacity: 0.5;
+  }
+  .voice-pill::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 34px;
+    background: linear-gradient(90deg, rgba(55,138,221,0), rgba(55,138,221,0.2), rgba(125,184,232,0.25), rgba(55,138,221,0.2), rgba(55,138,221,0));
+    background-size: 200% 100%;
+    animation: glowSweep 3s ease-in-out infinite;
+    z-index: -3;
+    filter: blur(8px);
+  }
+  @keyframes borderFlow {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 300% 50%; }
+  }
+  @keyframes glowSweep {
+    0%, 100% { background-position: -100% 50%; opacity: 0.4; }
+    50% { background-position: 200% 50%; opacity: 0.8; }
+  }
+  .voice-pill-inner-bg {
+    position: absolute;
+    inset: 1px;
+    border-radius: 27px;
+    background: rgba(255,255,255,0.95);
+    z-index: -1;
+  }
+  .voice-pill-hints {
+    flex: 1;
+    overflow: hidden;
+    height: 20px;
+    position: relative;
+  }
+  .voice-pill-hint-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+    color: #378ADD;
+    font-weight: 500;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .voice-pill-hint-text.active { opacity: 1; }
+  .voice-pill-expand {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .voice-pill-expand svg { width: 16px; height: 16px; color: #378ADD; }
+
+  .voice-pill-mic {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .voice-pill-mic svg {
+    width: 16px;
+    height: 16px;
+    color: #378ADD;
+    position: relative;
+    z-index: 1;
+  }
+  .voice-pill-mic::after {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    border-radius: 50%;
+    background: rgba(55, 138, 221, 0.1);
+    animation: micPulse 2s ease-in-out infinite;
+  }
+  @keyframes micPulse {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.3); opacity: 0; }
+  }
+
+  /* ── Response bubble (above pill) ── */
+  .response-bubble {
+    position: absolute;
+    bottom: 80px;
+    left: 16px;
+    right: 16px;
+    background: #FFFFFF;
+    border-radius: 16px;
+    padding: 14px 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.06);
+    z-index: 27;
+    opacity: 0;
+    transform: translateY(12px);
+    pointer-events: none;
+    transition: opacity 0.35s ease, transform 0.35s ease;
+  }
+  .response-bubble.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  .response-bubble-user {
+    font-size: 13px;
+    color: #171717;
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+  }
+  .response-bubble-user svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    color: #378ADD;
+  }
+  .response-bubble-thinking {
+    display: none;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 0 0;
+  }
+  .response-bubble-thinking.show { display: flex; }
+  .thinking-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #378ADD;
+    animation: thinkDot 1.2s ease-in-out infinite;
+  }
+  .thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+  .thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes thinkDot {
+    0%, 100% { opacity: 0.25; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1); }
+  }
+  .response-bubble-agent {
+    font-size: 14px;
+    color: #171717;
+    line-height: 1.45;
+    padding-top: 8px;
+    border-top: 1px solid #F0F0EE;
+    margin-top: 10px;
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: opacity 0.4s ease, max-height 0.4s ease;
+  }
+  .response-bubble-agent.show {
+    opacity: 1;
+    max-height: 200px;
+  }
+  .response-bubble-progress {
+    position: absolute;
+    bottom: 0;
+    left: 16px;
+    right: 16px;
+    height: 2px;
+    border-radius: 1px;
+    background: #E5E5E3;
+    overflow: hidden;
+  }
+  .response-bubble-progress-bar {
+    height: 100%;
+    background: #378ADD;
+    border-radius: 1px;
+    animation: bubbleTimer 9s linear forwards;
+  }
+  @keyframes bubbleTimer {
+    0% { width: 100%; }
+    100% { width: 0%; }
+  }
+
+  /* ── Voice overlay (immersive mode over doc) ── */
+  .voice-overlay {
+    position: absolute;
+    inset: 0;
+    background: #FFFFFF;
+    z-index: 27;
+    display: none;
+    flex-direction: column;
+  }
+  .voice-overlay.visible { display: flex; }
+  .voice-overlay-handle {
+    display: flex;
+    justify-content: center;
+    padding: 56px 0 4px;
+    flex-shrink: 0;
+  }
+  .voice-overlay-handle-bar {
+    width: 36px;
+    height: 4px;
+    background: #DEDEDB;
+    border-radius: 2px;
+  }
+  .voice-overlay-collapse {
+    position: absolute;
+    top: 54px;
+    right: 16px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #F0F0EE;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 28;
+  }
+  .voice-overlay-collapse:active { background: #E5F1FC; }
+  .voice-overlay-collapse svg { width: 16px; height: 16px; color: #6B6B66; }
+  .voice-overlay-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+  }
+  .voice-overlay-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+  .voice-overlay-empty canvas {
+    width: 160px;
+    height: 160px;
+  }
+  .voice-overlay-empty-text {
+    font-size: 16px;
+    color: #8E8E8A;
+    font-weight: 400;
+  }
+  .voice-overlay-body.has-chat .voice-overlay-empty { display: none; }
+  .voice-overlay-active {
+    display: none;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+  }
+  .voice-overlay-body.has-chat .voice-overlay-active { display: flex; }
+  .voice-overlay-orb-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 0 4px;
+    flex-shrink: 0;
+  }
+  .voice-overlay-orb-row canvas {
+    width: 80px;
+    height: 80px;
+  }
+  .voice-overlay-chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .vo-bubble {
+    max-width: 85%;
+    padding: 10px 14px;
+    border-radius: 16px;
+    font-size: 13.5px;
+    line-height: 1.45;
+  }
+  .vo-bubble.user {
+    align-self: flex-end;
+    background: #E5F1FC;
+    color: #171717;
+    border-bottom-right-radius: 4px;
+  }
+  .vo-bubble.agent {
+    align-self: flex-start;
+    background: #F5F5F3;
+    color: #171717;
+    border-bottom-left-radius: 4px;
+  }
+  .voice-overlay-suggestions {
+    flex-shrink: 0;
+    padding: 4px 0 0;
+  }
+  .voice-overlay-suggestions-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: #8E8E8A;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    padding-left: 20px;
+  }
+  .voice-overlay-suggestions-rows {
+    overflow: hidden;
+    padding: 0 0 8px;
+  }
+  .vo-suggestion-row {
+    display: flex;
+    gap: 8px;
+    white-space: nowrap;
+    width: max-content;
+    padding-bottom: 8px;
+    animation: scrollChips 35s linear infinite;
+  }
+  .vo-suggestion-row:nth-child(2) {
+    animation: scrollChips 35s linear infinite;
+    animation-delay: -8s;
+  }
+  .vo-suggestion {
+    padding: 8px 14px;
+    background: #F9F8F6;
+    border: 0.5px solid #DEDEDB;
+    border-radius: 20px;
+    font-size: 13px;
+    color: #171717;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .vo-suggestion:active { background: #E5F1FC; }
+  .voice-overlay-input {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 28px 32px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Prototype state switcher ── -->
+<div class="state-switcher">
+  <div class="label">Voice states</div>
+  <button onclick="setState('idle')" id="btn-idle" class="active">1 — Idle / Listening</button>
+  <button onclick="setState('hearing')" id="btn-hearing">2 — Hearing you</button>
+  <button onclick="setState('thinking')" id="btn-thinking">3 — Thinking</button>
+  <button onclick="setState('speaking')" id="btn-speaking">4 — Speaking</button>
+  <div class="label" style="margin-top:4px">HITL moments</div>
+  <button onclick="showPicker()">Browse files (picker)</button>
+  <button onclick="showPermission()">Permission prompt</button>
+  <button onclick="demoDocVoice()">Doc voice reply</button>
+</div>
+
+<!-- ── Device frame ── -->
+<div class="device" id="device">
+
+  <!-- Top bar -->
+  <div class="top-bar">
+    <div class="top-bar-left">
+      <img class="acrobat-mark" src="data:image/png;base64,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" alt="Acrobat Voice" />
+      <span class="top-bar-label">Acrobat Voice</span>
+    </div>
+    <div class="top-bar-right">
+      <button class="history-btn" onclick="toggleHistory()" title="Chat history">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      </button>
+      <div class="account-circle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat history overlay -->
+  <div class="history-overlay" id="historyOverlay">
+    <div class="history-header">
+      <span class="history-title">Conversations</span>
+      <button class="history-close" onclick="toggleHistory()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="history-list" id="historyList">
+      <div class="history-empty">No conversations yet</div>
+    </div>
+    <button class="new-chat-fab" onclick="startNewChat()" title="New conversation">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+    </button>
+  </div>
+
+  <!-- Agent zone -->
+  <div class="agent-zone" id="agentZone">
+
+    <!-- Orb -->
+    <div class="orb-container">
+      <canvas id="orb" width="400" height="400"></canvas>
+    </div>
+
+    <!-- Greeting (visible in idle) -->
+    <div class="greeting" id="greeting">Hi Tony — what would you like to do?</div>
+    <div class="greeting-sub" id="greetingSub">I can find files, open readings, and search across your apps.</div>
+
+    <!-- Transcript area -->
+    <div class="transcript" id="transcript"></div>
+
+    <!-- Hint chips -->
+    <!-- Live transcript (visible during hearing) -->
+    <div class="live-transcript" id="liveTranscript"></div>
+
+    <div class="chips-area" id="chipsArea">
+      <div class="chips-row" id="chipsRow1"></div>
+      <div class="chips-row" id="chipsRow2"></div>
+    </div>
+  </div>
+
+  <!-- Docked voice bar -->
+  <div class="voice-bar" id="voiceBar">
+    <button class="bar-btn" onclick="toggleTypeMode()" title="Switch to typing">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h1M10 10h1M14 10h1M18 10h1"/><path d="M6 14h1M10 14h1M14 14h1M18 14h1"/><path d="M8 18h8"/></svg>
+    </button>
+    <button class="bar-btn" onclick="toggleRecents()" title="Recent files">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="14" height="14" rx="2"/><path d="M7 8V6a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2h-2"/></svg>
+    </button>
+  </div>
+
+  <!-- Recents bottom sheet -->
+  <div class="recents-sheet-backdrop" id="recentsBackdrop" onclick="toggleRecents()"></div>
+  <div class="recents-sheet" id="recentsSheet">
+    <div class="recents-sheet-handle"></div>
+    <div class="recents-sheet-title">Recent files</div>
+    <div class="recents-sheet-list" id="recentsSheetList"></div>
+  </div>
+
+  <!-- Type mode overlay -->
+  <div class="type-overlay" id="typeOverlay">
+    <input class="type-input" id="typeInput" placeholder="Type a command…" />
+    <button class="type-send">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </button>
+    <button class="type-close" onclick="toggleTypeMode()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <!-- Grid / show-everything overlay -->
+  <div class="grid-overlay" id="gridOverlay">
+    <div class="grid-top-bar">
+      <div class="top-bar-left">
+        <img class="acrobat-mark" src="data:image/png;base64,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" alt="Acrobat Voice" />
+        <span class="top-bar-label">Acrobat</span>
+      </div>
+      <button class="grid-close" onclick="toggleGrid()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="grid-section-label">Create new</div>
+    <div class="template-rail">
+      <div class="template-card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h4"/></svg><span>Blank PDF</span></div>
+      <div class="template-card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 16l4-4 3 3 5-5 4 4"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg><span>Scan</span></div>
+      <div class="template-card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M3 9h18"/></svg><span>Form</span></div>
+      <div class="template-card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 5v14M5 12h14"/><circle cx="12" cy="12" r="9"/></svg><span>Combine</span></div>
+    </div>
+
+    <div class="grid-section-label">Recent files</div>
+    <div class="recents-list">
+      <div class="recent-item"><div class="recent-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h4"/></svg></div><div class="recent-info"><div class="recent-name">Bio 101 — Week 4 Reading.pdf</div><div class="recent-meta">Modified 2 hours ago</div></div></div>
+      <div class="recent-item"><div class="recent-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h4"/></svg></div><div class="recent-info"><div class="recent-name">Chemistry Notes.pdf</div><div class="recent-meta">Yesterday</div></div></div>
+      <div class="recent-item"><div class="recent-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h4"/></svg></div><div class="recent-info"><div class="recent-name">Lab Safety Waiver.pdf</div><div class="recent-meta">Jul 10</div></div></div>
+      <div class="recent-item"><div class="recent-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h4"/></svg></div><div class="recent-info"><div class="recent-name">Psych 201 — Chapter 3.pdf</div><div class="recent-meta">Jul 8</div></div></div>
+    </div>
+
+    <div class="grid-tab-bar">
+      <div class="grid-tab active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"/></svg>Home</div>
+      <div class="grid-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6h16M4 12h16M4 18h16"/></svg>Files</div>
+      <div class="grid-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>Search</div>
+      <div class="grid-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9c.2.65.77 1.1 1.45 1.12H21a2 2 0 010 4h-.09c-.68.02-1.25.47-1.45 1.12z"/></svg>Tools</div>
+    </div>
+  </div>
+
+  <!-- HITL: file picker sheet -->
+  <div class="picker-sheet" id="pickerSheet">
+    <div class="picker-handle"></div>
+    <div class="picker-title">Choose a file from your device</div>
+    <div class="picker-list">
+      <div class="picker-item" onclick="closePicker()"><div class="recent-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h4"/></svg></div><div class="recent-info"><div class="recent-name">Downloads</div><div class="recent-meta">14 files</div></div></div>
+      <div class="picker-item" onclick="closePicker()"><div class="recent-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h4"/></svg></div><div class="recent-info"><div class="recent-name">Bio 101 — Week 4 Reading.pdf</div><div class="recent-meta">1.2 MB · 2 hours ago</div></div></div>
+      <div class="picker-item" onclick="closePicker()"><div class="recent-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h4"/></svg></div><div class="recent-info"><div class="recent-name">Syllabus_Fall2026.pdf</div><div class="recent-meta">340 KB · Jul 5</div></div></div>
+      <div class="picker-item" onclick="closePicker()"><div class="recent-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h4"/></svg></div><div class="recent-info"><div class="recent-name">Research_Paper_Draft.pdf</div><div class="recent-meta">2.8 MB · Jul 3</div></div></div>
+      <div class="picker-item" onclick="closePicker()"><div class="recent-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h4"/></svg></div><div class="recent-info"><div class="recent-name">Lab_Report_Template.pdf</div><div class="recent-meta">500 KB · Jun 28</div></div></div>
+    </div>
+  </div>
+
+  <!-- HITL: permission overlay -->
+  <div class="permission-overlay" id="permissionOverlay">
+    <div class="permission-card">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 7v4a9 9 0 0018 0V7"/><rect x="7" y="3" width="10" height="8" rx="5"/></svg>
+      <h3>Access your files</h3>
+      <p>I need access to your device storage to browse and open files. Tap "Allow" to continue.</p>
+      <button class="perm-allow" onclick="closePermission()">Allow</button>
+      <button class="perm-deny" onclick="closePermission()">Not now</button>
+    </div>
+  </div>
+
+  <!-- Document viewer -->
+  <div class="doc-viewer" id="docViewer">
+    <div class="doc-top-bar">
+      <button class="doc-back" onclick="closeDocViewer()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+      <span class="doc-filename" id="docFilename">Chemistry Notes.pdf</span>
+      <div class="doc-actions">
+        <button class="doc-action-btn" title="Share">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 002 2h12a2 2 0 002-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        </button>
+        <button class="doc-action-btn" title="More">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="doc-body">
+      <div class="doc-page" id="docPage">
+        <div class="doc-page-title">Chemistry 201 — Lecture Notes</div>
+        <div class="doc-page-subtitle">Chapter 5: Inorganic Chemistry</div>
+        <p>Inorganic chemistry deals with the synthesis and behavior of inorganic and organometallic compounds. This field covers chemical compounds that are not carbon-based, which are the subjects of organic chemistry.</p>
+        <p>The distinction between the two disciplines is far from absolute, as there is much overlap in the subdiscipline of organometallic chemistry. It has applications in every aspect of the chemical industry, including catalysis, materials science, pigments, surfactants, coatings, medications, fuels, and agriculture.</p>
+        <p><span class="doc-highlight">Coordination compounds consist of a central metal atom or ion surrounded by ligands. The nature of the metal-ligand bond can range from covalent to ionic.</span> Common geometries include octahedral, tetrahedral, and square planar arrangements.</p>
+        <p>Crystal field theory (CFT) describes the breaking of degeneracies of electron orbital states, usually d or f orbitals, due to a static electric field produced by a surrounding charge distribution (anion neighbors).</p>
+        <p>Transition metals are defined as elements that have a partially filled d subshell or that can give rise to cations with an incomplete d subshell. By this definition, zinc, cadmium, and mercury are not transition metals.</p>
+        <p>The spectrochemical series is a list of ligands ordered by ligand "strength," and a list of metal ions based on oxidation number, group, and identity. For a metal ion, the ligands modify the difference in energy between the d orbitals, called the ligand-field splitting parameter.</p>
+      </div>
+    </div>
+
+    <!-- Response bubble (above pill) -->
+    <div class="response-bubble" id="responseBubble">
+      <div class="response-bubble-user">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="1" width="6" height="11" rx="3"/>
+          <path d="M19 10v1a7 7 0 0 1-14 0v-1"/>
+        </svg>
+        <span id="responseBubbleUserText"></span>
+      </div>
+      <div class="response-bubble-thinking" id="responseBubbleThinking">
+        <div class="thinking-dot"></div>
+        <div class="thinking-dot"></div>
+        <div class="thinking-dot"></div>
+      </div>
+      <div class="response-bubble-agent" id="responseBubbleAgent"></div>
+      <div class="response-bubble-progress"><div class="response-bubble-progress-bar" id="responseBubbleBar"></div></div>
+    </div>
+
+    <!-- Collapsed voice pill (floating) -->
+    <div class="voice-pill" id="voicePill" onclick="expandVoiceOverlay()">
+      <div class="voice-pill-inner-bg"></div>
+      <div class="voice-pill-mic">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="1" width="6" height="11" rx="3"/>
+          <path d="M19 10v1a7 7 0 0 1-14 0v-1"/>
+          <line x1="12" y1="19" x2="12" y2="23"/>
+          <line x1="8" y1="23" x2="16" y2="23"/>
+        </svg>
+      </div>
+      <div class="voice-pill-hints" id="docHintsContainer"></div>
+      <div class="voice-pill-expand">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+      </div>
+    </div>
+
+    <!-- Immersive voice overlay (over doc) -->
+    <div class="voice-overlay" id="voiceOverlay">
+      <div class="voice-overlay-handle">
+        <div class="voice-overlay-handle-bar"></div>
+      </div>
+      <button class="voice-overlay-collapse" onclick="collapseVoiceOverlay()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="voice-overlay-body" id="overlayBody">
+        <div class="voice-overlay-empty">
+          <canvas id="overlayOrb" width="400" height="400"></canvas>
+          <div class="voice-overlay-empty-text">Ask anything about this document</div>
+        </div>
+        <div class="voice-overlay-active">
+          <div class="voice-overlay-orb-row">
+            <canvas id="overlayOrbSmall" width="400" height="400"></canvas>
+          </div>
+          <div class="voice-overlay-chat" id="overlayChat"></div>
+        </div>
+        <div class="voice-overlay-suggestions">
+          <div class="voice-overlay-suggestions-label">Try asking</div>
+          <div class="voice-overlay-suggestions-rows">
+            <div class="vo-suggestion-row" id="voSugRow1"></div>
+            <div class="vo-suggestion-row" id="voSugRow2"></div>
+          </div>
+        </div>
+      </div>
+      <div class="voice-overlay-input">
+        <button class="bar-btn" onclick="toggleTypeMode()" title="Switch to typing">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h1M10 10h1M14 10h1M18 10h1"/><path d="M6 14h1M10 14h1M14 14h1M18 14h1"/><path d="M8 18h8"/></svg>
+        </button>
+        <button class="bar-btn" onclick="toggleRecents()" title="Recent files">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="14" height="14" rx="2"/><path d="M7 8V6a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2h-2"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── Chip definitions ──
+const chips = [
+  { text: 'Open my Bio 101 reading', icon: 'clock', response: 'Opening Bio 101 — Week 4 Reading from your recents.' },
+  { text: 'Find the chemistry notes Mom emailed me', icon: 'mail', response: 'Found it — Chemistry Notes from your Gmail, sent by Mom on July 12.' },
+  { text: 'Open the file I got on WhatsApp', icon: 'message', response: 'I see a PDF from WhatsApp — Lab Safety Waiver, received yesterday. Opening it now.' },
+  { text: 'Search for the lab safety waiver', icon: 'search', response: 'Found "Lab Safety Waiver.pdf" in your Downloads. Opening it.' },
+  { text: 'Open my psych textbook chapter', icon: 'folder', response: 'Opening Psych 201 — Chapter 3 from your device.' }
+];
+
+const chipIcons = {
+  clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>',
+  mail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>',
+  message: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>',
+  search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>',
+  folder: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>'
+};
+
+// ── State management ──
+let currentState = 'idle';
+let flowTimer = null;
+
+function buildChips() {
+  const row1 = document.getElementById('chipsRow1');
+  const row2 = document.getElementById('chipsRow2');
+  row1.innerHTML = '';
+  row2.innerHTML = '';
+  const row1Chips = [chips[0], chips[1], chips[2]];
+  const row2Chips = [chips[3], chips[4]];
+  // Duplicate for seamless looping
+  [...row1Chips, ...row1Chips].forEach((c) => {
+    const el = document.createElement('div');
+    el.className = 'chip';
+    el.innerHTML = chipIcons[c.icon] + `<span>${c.text}</span>`;
+    el.onclick = () => runChipFlow(c);
+    row1.appendChild(el);
+  });
+  [...row2Chips, ...row2Chips].forEach((c) => {
+    const el = document.createElement('div');
+    el.className = 'chip';
+    el.innerHTML = chipIcons[c.icon] + `<span>${c.text}</span>`;
+    el.onclick = () => runChipFlow(c);
+    row2.appendChild(el);
+  });
+}
+
+function setState(state) {
+  if (flowTimer) { clearTimeout(flowTimer); flowTimer = null; }
+  currentState = state;
+
+  document.querySelectorAll('.state-switcher button').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('btn-' + state);
+  if (btn) btn.classList.add('active');
+
+  const greeting = document.getElementById('greeting');
+  const greetingSub = document.getElementById('greetingSub');
+  const chipsArea = document.getElementById('chipsArea');
+  const transcript = document.getElementById('transcript');
+  const liveTranscript = document.getElementById('liveTranscript');
+  // Reset HITL overlays
+  closePicker();
+  closePermission();
+  restoreBarNormal();
+
+  // Clear live transcript unless entering hearing
+  if (state !== 'hearing') liveTranscript.innerHTML = '';
+
+  switch (state) {
+    case 'idle':
+      greeting.style.opacity = '1';
+      greetingSub.style.opacity = '1';
+      chipsArea.classList.remove('hidden');
+      transcript.innerHTML = '';
+      break;
+
+    case 'hearing':
+      greeting.style.opacity = '0';
+      greetingSub.style.opacity = '0';
+      chipsArea.classList.add('hidden');
+      transcript.innerHTML = '';
+      liveTranscript.innerHTML = `Open the chemistry notes that had the chapter<span class="partial"> on inorganic chemistry from last week</span>`;
+      break;
+
+    case 'thinking':
+      greeting.style.opacity = '0';
+      greetingSub.style.opacity = '0';
+      chipsArea.classList.add('hidden');
+      transcript.innerHTML = `<div class="bubble user">Open the chemistry notes that had the chapter on inorganic chemistry from last week</div>`;
+      break;
+
+    case 'speaking':
+      greeting.style.opacity = '0';
+      greetingSub.style.opacity = '0';
+      chipsArea.classList.add('hidden');
+      transcript.innerHTML = `
+        <div class="bubble user">Open the chemistry notes that had the chapter on inorganic chemistry from last week</div>
+        <div class="bubble agent">Found it — Chemistry Notes, Chapter 5: Inorganic Chemistry. You opened this last Tuesday. Opening it now.</div>`;
+      break;
+
+    case 'recovery':
+      greeting.style.opacity = '0';
+      greetingSub.style.opacity = '0';
+      chipsArea.classList.add('hidden');
+      transcript.innerHTML = `<div class="bubble user">Open my reading</div>`;
+      showRecoveryBar();
+      break;
+  }
+
+  scrollTranscript();
+}
+
+function showRecoveryBar() {
+  const bar = document.getElementById('voiceBar');
+  bar.innerHTML = `
+    <div class="recovery-chips" style="display:flex;gap:8px;justify-content:center;width:100%">
+      <div class="recovery-chip" onclick="pickRecovery('Bio 101 Reading')">Bio 101 Reading</div>
+      <div class="recovery-chip" onclick="pickRecovery('Lab Waiver')">Lab Waiver</div>
+    </div>
+  `;
+}
+
+function pickRecovery(name) {
+  restoreBarNormal();
+  const transcript = document.getElementById('transcript');
+  const reply = `Opening ${name} now.`;
+  transcript.innerHTML += `<div class="bubble agent">${reply}</div>`;
+  saveChat('Open my reading', reply);
+  currentState = 'speaking';
+  scrollTranscript();
+  flowTimer = setTimeout(() => openDocViewer(name + '.pdf'), 2500);
+}
+
+function restoreBarNormal() {
+  const bar = document.getElementById('voiceBar');
+  bar.innerHTML = `
+    <button class="bar-btn" onclick="toggleTypeMode()" title="Switch to typing">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h1M10 10h1M14 10h1M18 10h1"/><path d="M6 14h1M10 14h1M14 14h1M18 14h1"/><path d="M8 18h8"/></svg>
+    </button>
+    <button class="bar-btn" onclick="toggleRecents()" title="Recent files">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="14" height="14" rx="2"/><path d="M7 8V6a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2h-2"/></svg>
+    </button>
+  `;
+}
+
+// ── Chip flow: scripted mini-flow ──
+function runChipFlow(chip) {
+  // Hearing — show as live transcript paragraph
+  setState('hearing');
+  const transcript = document.getElementById('transcript');
+  const liveTranscript = document.getElementById('liveTranscript');
+  transcript.innerHTML = '';
+  liveTranscript.innerHTML = `${chip.text}<span class="partial">…</span>`;
+
+  flowTimer = setTimeout(() => {
+    // Done hearing — move to bubble, clear live transcript
+    liveTranscript.innerHTML = '';
+    transcript.innerHTML = `<div class="bubble user">${chip.text}</div>`;
+
+    // Thinking
+    currentState = 'thinking';
+    document.querySelectorAll('.state-switcher button').forEach(b => b.classList.remove('active'));
+    document.getElementById('btn-thinking').classList.add('active');
+    scrollTranscript();
+
+    flowTimer = setTimeout(() => {
+      // Speaking
+      currentState = 'speaking';
+      document.querySelectorAll('.state-switcher button').forEach(b => b.classList.remove('active'));
+      document.getElementById('btn-speaking').classList.add('active');
+      transcript.innerHTML += `<div class="bubble agent">${chip.response}</div>`;
+      saveChat(chip.text, chip.response);
+      scrollTranscript();
+
+      flowTimer = setTimeout(() => {
+        // Transition to document viewer
+        const fileMap = {
+          'Open my Bio 101 reading': 'Bio 101 — Week 4 Reading.pdf',
+          'Find the chemistry notes Mom emailed me': 'Chemistry Notes.pdf',
+          'Open the file I got on WhatsApp': 'Lab Safety Waiver.pdf',
+          'Search for the lab safety waiver': 'Lab Safety Waiver.pdf',
+          'Open my psych textbook chapter': 'Psych 201 — Chapter 3.pdf'
+        };
+        const filename = fileMap[chip.text] || 'Document.pdf';
+        openDocViewer(filename);
+      }, 3000);
+    }, 1500);
+  }, 1200);
+}
+
+function scrollTranscript() {
+  const zone = document.getElementById('agentZone');
+  requestAnimationFrame(() => zone.scrollTop = zone.scrollHeight);
+}
+
+// ── Type mode ──
+function toggleTypeMode() {
+  const overlay = document.getElementById('typeOverlay');
+  overlay.classList.toggle('visible');
+  if (overlay.classList.contains('visible')) {
+    setTimeout(() => document.getElementById('typeInput').focus(), 300);
+  }
+}
+
+// ── Grid overlay ──
+function toggleGrid() {
+  document.getElementById('gridOverlay').classList.toggle('visible');
+}
+
+// ── Recents bottom sheet ──
+function toggleRecents() {
+  const sheet = document.getElementById('recentsSheet');
+  const backdrop = document.getElementById('recentsBackdrop');
+  const isVisible = sheet.classList.contains('visible');
+  if (isVisible) {
+    sheet.classList.remove('visible');
+    backdrop.classList.remove('visible');
+  } else {
+    populateRecents();
+    sheet.classList.add('visible');
+    backdrop.classList.add('visible');
+  }
+}
+
+function populateRecents() {
+  const list = document.getElementById('recentsSheetList');
+  const recentsData = [
+    { name: 'Bio 101 — Week 4 Reading.pdf', date: '2 hours ago' },
+    { name: 'Chemistry Notes.pdf', date: 'Yesterday' },
+    { name: 'Lab Safety Waiver.pdf', date: 'Jul 10' },
+    { name: 'Psych 201 — Chapter 3.pdf', date: 'Jul 8' },
+    { name: 'Syllabus_Fall2026.pdf', date: 'Jul 5' }
+  ];
+  list.innerHTML = recentsData.map(f => `
+    <div class="recents-sheet-item" onclick="toggleRecents()">
+      <div class="recents-sheet-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h4"/></svg>
+      </div>
+      <div class="recents-sheet-info">
+        <div class="recents-sheet-name">${f.name}</div>
+        <div class="recents-sheet-meta">${f.date}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── HITL: ambiguous (spoken chips) ──
+function showAmbiguous() {
+  setState('recovery');
+}
+
+// ── HITL: file picker ──
+function showPicker() {
+  // Show narration first, then picker
+  setState('speaking');
+  const transcript = document.getElementById('transcript');
+  transcript.innerHTML = `
+    <div class="bubble user">Browse my files</div>
+    <div class="bubble agent">Let me open your files so you can pick one.</div>`;
+  scrollTranscript();
+  setTimeout(() => {
+    document.getElementById('pickerSheet').classList.add('visible');
+  }, 800);
+}
+function closePicker() {
+  document.getElementById('pickerSheet').classList.remove('visible');
+}
+
+// ── HITL: permission ──
+function showPermission() {
+  setState('speaking');
+  const transcript = document.getElementById('transcript');
+  transcript.innerHTML = `
+    <div class="bubble user">Open a file from my phone</div>
+    <div class="bubble agent">I need access to your files — tap Allow to continue.</div>`;
+  scrollTranscript();
+  setTimeout(() => {
+    document.getElementById('permissionOverlay').classList.add('visible');
+  }, 800);
+}
+function closePermission() {
+  document.getElementById('permissionOverlay').classList.remove('visible');
+}
+
+// ── Orb rendering (canvas) ──
+const canvas = document.getElementById('orb');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+const cx = W / 2, cy = H / 2;
+let t = 0;
+
+function drawOrb() {
+  ctx.clearRect(0, 0, W, H);
+  t += 0.02;
+
+  switch (currentState) {
+    case 'idle':
+      drawIdleOrb();
+      break;
+    case 'hearing':
+      drawWaveformOrb();
+      break;
+    case 'thinking':
+      drawThinkingOrb();
+      break;
+    case 'speaking':
+      drawSpeakingOrb();
+      break;
+    case 'recovery':
+      drawRecoveryOrb();
+      break;
+  }
+
+  requestAnimationFrame(drawOrb);
+}
+
+function drawIdleOrb() {
+  const r = 100 + Math.sin(t * 1.2) * 6;
+
+  // Outer glow
+  const glowR = r + 30 + Math.sin(t * 1.2) * 10;
+  ctx.beginPath();
+  ctx.arc(cx, cy, glowR, 0, Math.PI * 2);
+  ctx.fillStyle = `rgba(55,138,221,${0.06 + Math.sin(t * 1.2) * 0.03})`;
+  ctx.fill();
+
+  // Main orb with gradient
+  const gradient = ctx.createRadialGradient(cx - 20, cy - 20, 0, cx, cy, r);
+  gradient.addColorStop(0, '#5BA3E6');
+  gradient.addColorStop(0.6, '#378ADD');
+  gradient.addColorStop(1, '#2672C0');
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = gradient;
+  ctx.fill();
+
+  // Highlight
+  const hlGrad = ctx.createRadialGradient(cx - 28, cy - 34, 0, cx - 28, cy - 34, r * 0.6);
+  hlGrad.addColorStop(0, 'rgba(255,255,255,0.25)');
+  hlGrad.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = hlGrad;
+  ctx.fill();
+}
+
+function drawWaveformOrb() {
+  // Smooth horizontal waveform — like a voice visualizer
+  const barCount = 40;
+  const totalWidth = W * 0.8;
+  const startX = (W - totalWidth) / 2;
+  const barWidth = totalWidth / barCount - 2;
+  const maxH = 120;
+  const minH = 8;
+
+  ctx.lineCap = 'round';
+
+  for (let i = 0; i < barCount; i++) {
+    const x = startX + i * (totalWidth / barCount);
+    const distFromCenter = Math.abs(i - barCount / 2) / (barCount / 2);
+    const envelope = 1 - distFromCenter * distFromCenter;
+    const wave = Math.sin(t * 5 + i * 0.5) * 0.5 + 0.5;
+    const wave2 = Math.sin(t * 3.7 + i * 0.8) * 0.3 + 0.5;
+    const h = minH + (maxH - minH) * envelope * (wave * 0.6 + wave2 * 0.4);
+
+    const gradient = ctx.createLinearGradient(x, cy - h / 2, x, cy + h / 2);
+    gradient.addColorStop(0, `rgba(55,138,221,${0.6 + envelope * 0.4})`);
+    gradient.addColorStop(0.5, '#378ADD');
+    gradient.addColorStop(1, `rgba(55,138,221,${0.6 + envelope * 0.4})`);
+
+    ctx.beginPath();
+    ctx.roundRect(x, cy - h / 2, barWidth, h, barWidth / 2);
+    ctx.fillStyle = gradient;
+    ctx.fill();
+  }
+}
+
+function drawBlob(baseR, points, speed, color1, color2) {
+  ctx.beginPath();
+  const steps = 120;
+  for (let i = 0; i <= steps; i++) {
+    const angle = (i / steps) * Math.PI * 2;
+    let r = baseR;
+    for (let p = 0; p < points.length; p++) {
+      r += points[p].amp * Math.sin(angle * points[p].freq + t * speed * points[p].phase);
+    }
+    const x = cx + Math.cos(angle) * r;
+    const y = cy + Math.sin(angle) * r;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  const gradient = ctx.createRadialGradient(cx - 10, cy - 12, 0, cx, cy, baseR + 15);
+  gradient.addColorStop(0, color1);
+  gradient.addColorStop(1, color2);
+  ctx.fillStyle = gradient;
+  ctx.fill();
+}
+
+function drawFaintBlob(baseR, points, speed, alpha) {
+  ctx.beginPath();
+  const steps = 120;
+  for (let i = 0; i <= steps; i++) {
+    const angle = (i / steps) * Math.PI * 2;
+    let r = baseR;
+    for (let p = 0; p < points.length; p++) {
+      r += points[p].amp * Math.sin(angle * points[p].freq + t * speed * points[p].phase);
+    }
+    const x = cx + Math.cos(angle) * r;
+    const y = cy + Math.sin(angle) * r;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  const grad = ctx.createRadialGradient(cx, cy, baseR * 0.5, cx, cy, baseR + 20);
+  grad.addColorStop(0, `rgba(55,138,221,${alpha})`);
+  grad.addColorStop(1, 'rgba(55,138,221,0)');
+  ctx.fillStyle = grad;
+  ctx.fill();
+}
+
+function drawThinkingOrb() {
+  const r = 70;
+  const pulse = Math.sin(t * 1.8) * 3;
+
+  // Faint organic aura behind the sphere
+  drawFaintBlob(r + 28, [
+    { amp: 14, freq: 3, phase: 1.0 },
+    { amp: 10, freq: 2, phase: 1.5 },
+    { amp: 7, freq: 4, phase: 0.7 },
+  ], 1.2, 0.14);
+  drawFaintBlob(r + 20, [
+    { amp: 10, freq: 2, phase: 0.9 },
+    { amp: 7, freq: 3, phase: 1.3 },
+  ], 1.0, 0.10);
+
+  // Clean sphere
+  const offX = Math.cos(t * 0.9) * 12;
+  const offY = Math.sin(t * 0.9) * 12;
+  const grad = ctx.createRadialGradient(cx + offX - 15, cy + offY - 18, 0, cx, cy, r + pulse);
+  grad.addColorStop(0, '#7DB8E8');
+  grad.addColorStop(0.5, '#4A96D9');
+  grad.addColorStop(1, '#2672C0');
+  ctx.beginPath();
+  ctx.arc(cx, cy, r + pulse, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Highlight
+  const hlX = cx + Math.cos(t * 0.7) * 16 - 10;
+  const hlY = cy + Math.sin(t * 0.7) * 16 - 14;
+  const hlGrad = ctx.createRadialGradient(hlX, hlY, 0, hlX, hlY, 40);
+  hlGrad.addColorStop(0, 'rgba(255,255,255,0.3)');
+  hlGrad.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.beginPath();
+  ctx.arc(cx, cy, r + pulse, 0, Math.PI * 2);
+  ctx.fillStyle = hlGrad;
+  ctx.fill();
+}
+
+function drawSpeakingOrb() {
+  const breathe = Math.sin(t * 2.0) * 10 + Math.sin(t * 3.1) * 4;
+  const r = 75 + breathe;
+
+  // Faint organic aura that breathes with the sphere
+  drawFaintBlob(r + 26, [
+    { amp: 16, freq: 2, phase: 1.2 },
+    { amp: 10, freq: 3, phase: 0.8 },
+    { amp: 7, freq: 5, phase: 1.6 },
+  ], 1.8, 0.14);
+  drawFaintBlob(r + 18, [
+    { amp: 11, freq: 3, phase: 1.0 },
+    { amp: 8, freq: 2, phase: 1.4 },
+  ], 1.5, 0.10);
+
+  // Clean sphere
+  const grad = ctx.createRadialGradient(cx - 16, cy - 20, 0, cx, cy, r);
+  grad.addColorStop(0, '#7DB8E8');
+  grad.addColorStop(0.45, '#4A96D9');
+  grad.addColorStop(1, '#2672C0');
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Highlight
+  const hlGrad = ctx.createRadialGradient(cx - 14, cy - 18, 0, cx - 14, cy - 18, r * 0.5);
+  hlGrad.addColorStop(0, 'rgba(255,255,255,0.28)');
+  hlGrad.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = hlGrad;
+  ctx.fill();
+}
+
+function drawRecoveryOrb() {
+  const r = 65 + Math.sin(t * 2) * 6;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, r + 14);
+  gradient.addColorStop(0, '#5a9fd4');
+  gradient.addColorStop(1, 'rgba(90,159,212,0)');
+  ctx.fillStyle = gradient;
+  ctx.fill();
+
+  ctx.font = '500 40px Inter, sans-serif';
+  ctx.fillStyle = '#FFFFFF';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('?', cx, cy + 1);
+}
+
+// ── Document viewer ──
+let overlayOrbCtx = null;
+let overlayOrbSmallCtx = null;
+let overlayOrbAnimating = false;
+
+const docHints = [
+  'Summarize this document',
+  'Navigate to the conclusion',
+  'Fill out this form',
+  'Share this file with Mom',
+  'Add a comment on page 2',
+  'What are coordination compounds?',
+  'Highlight key definitions',
+  'Read this section aloud',
+  'Export as Word document',
+  'Find all mentions of ligands'
+];
+
+function openDocViewer(filename) {
+  document.getElementById('docFilename').textContent = filename || 'Document.pdf';
+  document.getElementById('docViewer').classList.add('visible');
+  buildDocHints();
+}
+
+let hintInterval = null;
+let currentHintIndex = 0;
+
+function buildDocHints() {
+  const container = document.getElementById('docHintsContainer');
+  container.innerHTML = docHints.map((h, i) =>
+    `<div class="voice-pill-hint-text${i === 0 ? ' active' : ''}">${h}</div>`
+  ).join('');
+  currentHintIndex = 0;
+  if (hintInterval) clearInterval(hintInterval);
+  hintInterval = setInterval(cycleHint, 3000);
+}
+
+function cycleHint() {
+  const container = document.getElementById('docHintsContainer');
+  if (!container) return;
+  const hints = container.querySelectorAll('.voice-pill-hint-text');
+  if (hints.length === 0) return;
+  hints[currentHintIndex].classList.remove('active');
+  currentHintIndex = (currentHintIndex + 1) % hints.length;
+  hints[currentHintIndex].classList.add('active');
+}
+
+function closeDocViewer() {
+  document.getElementById('docViewer').classList.remove('visible');
+  document.getElementById('voiceOverlay').classList.remove('visible');
+  overlayOrbAnimating = false;
+  setState('idle');
+}
+
+const overlaySuggestions = [
+  { text: 'Summarize this document', icon: 'doc', response: 'Chapter 5 covers inorganic chemistry — coordination compounds, crystal field theory, transition metals, and the spectrochemical series.' },
+  { text: 'What are coordination compounds?', icon: 'question', response: 'Coordination compounds consist of a central metal atom or ion surrounded by ligands. The metal-ligand bond can range from covalent to ionic.' },
+  { text: 'Navigate to conclusion', icon: 'nav', response: 'Scrolling to the conclusion on page 8.' },
+  { text: 'Highlight key definitions', icon: 'tool', response: 'Found and highlighted 6 key definitions across this chapter.' },
+  { text: 'Create a presentation', icon: 'create', response: 'I\'ll generate a slide deck from this chapter. It will have 8 slides covering the main topics.' },
+  { text: 'Create a podcast script', icon: 'create', response: 'Creating a conversational podcast script from this chapter — estimated 12 minutes of content.' },
+  { text: 'Fill out this form', icon: 'tool', response: 'I can see 4 fillable fields in this document. Would you like me to auto-fill based on your profile?' },
+  { text: 'Share with Mom', icon: 'tool', response: 'Ready to share "Chemistry 201 — Lecture Notes" with Mom via email. Shall I send?' },
+  { text: 'Read aloud', icon: 'tool', response: 'Starting to read from the current section. Tap again to pause.' },
+  { text: 'Export as Word', icon: 'create', response: 'Converting to Word format. The file will be saved to your Downloads.' },
+  { text: 'Find mentions of ligands', icon: 'question', response: 'Found 4 mentions of "ligands" on pages 1, 2, and 3.' },
+  { text: 'Add comment on page 2', icon: 'tool', response: 'Page 2 is open. What would you like to comment?' },
+];
+
+let overlayConversation = [];
+
+function expandVoiceOverlay() {
+  document.getElementById('voiceOverlay').classList.add('visible');
+  if (!overlayOrbCtx) {
+    overlayOrbCtx = document.getElementById('overlayOrb').getContext('2d');
+  }
+  if (!overlayOrbSmallCtx) {
+    overlayOrbSmallCtx = document.getElementById('overlayOrbSmall').getContext('2d');
+  }
+  overlayOrbAnimating = true;
+  drawOverlayOrb();
+  buildOverlaySuggestions();
+  renderOverlayChat();
+}
+
+function collapseVoiceOverlay() {
+  document.getElementById('voiceOverlay').classList.remove('visible');
+  overlayOrbAnimating = false;
+}
+
+function buildOverlaySuggestions() {
+  const row1Items = overlaySuggestions.slice(0, 6);
+  const row2Items = overlaySuggestions.slice(6);
+  const row1 = document.getElementById('voSugRow1');
+  const row2 = document.getElementById('voSugRow2');
+  const makeChips = (items) => items.map((s) => {
+    const idx = overlaySuggestions.indexOf(s);
+    return `<div class="vo-suggestion" onclick="tapSuggestion(${idx})">${s.text}</div>`;
+  }).join('');
+  row1.innerHTML = makeChips(row1Items) + makeChips(row1Items);
+  row2.innerHTML = makeChips(row2Items) + makeChips(row2Items);
+}
+
+function renderOverlayChat() {
+  const body = document.getElementById('overlayBody');
+  const chat = document.getElementById('overlayChat');
+  if (overlayConversation.length > 0) {
+    body.classList.add('has-chat');
+  } else {
+    body.classList.remove('has-chat');
+  }
+  chat.innerHTML = overlayConversation.map(m =>
+    `<div class="vo-bubble ${m.role}">${m.text}</div>`
+  ).join('');
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function tapSuggestion(index) {
+  const s = overlaySuggestions[index];
+  overlayConversation.push({ role: 'user', text: s.text });
+  renderOverlayChat();
+  setTimeout(() => {
+    overlayConversation.push({ role: 'agent', text: s.response });
+    renderOverlayChat();
+  }, 800);
+}
+
+let responseBubbleTimer = null;
+
+const docVoiceExamples = [
+  { user: 'What are coordination compounds?', agent: 'Coordination compounds consist of a central metal atom or ion surrounded by ligands. The metal-ligand bond can range from covalent to ionic.' },
+  { user: 'Summarize this chapter', agent: 'Chapter 5 covers inorganic chemistry — coordination compounds, crystal field theory, transition metals, and the spectrochemical series.' },
+  { user: 'Highlight all mentions of ligands', agent: 'Found and highlighted 4 mentions of ligands across pages 1–3.' },
+  { user: 'Navigate to the conclusion', agent: 'Scrolling to the conclusion on page 8.' },
+  { user: 'Share this file with Mom', agent: 'Ready to share "Chemistry 201 — Lecture Notes" with Mom via email. Shall I send it?' },
+];
+
+let responseBubblePhaseTimer = null;
+
+function showResponseBubble(userText, agentText) {
+  const bubble = document.getElementById('responseBubble');
+  const thinkEl = document.getElementById('responseBubbleThinking');
+  const agentEl = document.getElementById('responseBubbleAgent');
+  const bar = document.getElementById('responseBubbleBar');
+
+  if (responseBubbleTimer) clearTimeout(responseBubbleTimer);
+  if (responseBubblePhaseTimer) clearTimeout(responseBubblePhaseTimer);
+
+  document.getElementById('responseBubbleUserText').textContent = userText;
+  agentEl.textContent = agentText;
+  agentEl.classList.remove('show');
+  thinkEl.classList.add('show');
+
+  bar.style.animation = 'none';
+  bar.offsetHeight;
+  bar.style.animation = 'bubbleTimer 9s linear forwards';
+
+  if (hintInterval) clearInterval(hintInterval);
+  const pill = document.getElementById('voicePill');
+  pill.style.opacity = '0.4';
+  pill.style.pointerEvents = 'none';
+
+  setTimeout(() => { bubble.classList.add('visible'); }, 50);
+
+  responseBubblePhaseTimer = setTimeout(() => {
+    thinkEl.classList.remove('show');
+    agentEl.classList.add('show');
+  }, 2000);
+
+  responseBubbleTimer = setTimeout(() => {
+    bubble.classList.remove('visible');
+    setTimeout(() => {
+      agentEl.classList.remove('show');
+      thinkEl.classList.remove('show');
+    }, 400);
+    pill.style.opacity = '1';
+    pill.style.pointerEvents = 'auto';
+    hintInterval = setInterval(cycleHint, 3000);
+  }, 9000);
+}
+
+function demoDocVoice() {
+  const ex = docVoiceExamples[Math.floor(Math.random() * docVoiceExamples.length)];
+  showResponseBubble(ex.user, ex.agent);
+}
+
+function drawOrbOnCanvas(c, r) {
+  const w = 400, h = 400;
+  const ocx = w / 2, ocy = h / 2;
+  c.clearRect(0, 0, w, h);
+
+  const glow = c.createRadialGradient(ocx, ocy, r * 0.5, ocx, ocy, r + 30);
+  glow.addColorStop(0, 'rgba(55,138,221,0.08)');
+  glow.addColorStop(1, 'rgba(55,138,221,0)');
+  c.beginPath();
+  c.arc(ocx, ocy, r + 30, 0, Math.PI * 2);
+  c.fillStyle = glow;
+  c.fill();
+
+  const grad = c.createRadialGradient(ocx - 20, ocy - 24, 0, ocx, ocy, r);
+  grad.addColorStop(0, '#9EC5E8');
+  grad.addColorStop(0.4, '#5BA3E6');
+  grad.addColorStop(1, '#2672C0');
+  c.beginPath();
+  c.arc(ocx, ocy, r, 0, Math.PI * 2);
+  c.fillStyle = grad;
+  c.fill();
+
+  const hl = c.createRadialGradient(ocx - 22, ocy - 28, 0, ocx - 22, ocy - 28, 50);
+  hl.addColorStop(0, 'rgba(255,255,255,0.3)');
+  hl.addColorStop(1, 'rgba(255,255,255,0)');
+  c.beginPath();
+  c.arc(ocx, ocy, r, 0, Math.PI * 2);
+  c.fillStyle = hl;
+  c.fill();
+}
+
+function drawOverlayOrb() {
+  if (!overlayOrbAnimating) return;
+  if (overlayOrbCtx) drawOrbOnCanvas(overlayOrbCtx, 90);
+  if (overlayOrbSmallCtx) drawOrbOnCanvas(overlayOrbSmallCtx, 90);
+  requestAnimationFrame(drawOverlayOrb);
+}
+
+// ── Chat history ──
+let chatHistory = [];
+
+function saveChat(userText, agentText) {
+  chatHistory.unshift({
+    id: Date.now(),
+    userText,
+    agentText,
+    time: new Date()
+  });
+  renderHistory();
+}
+
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  if (chatHistory.length === 0) {
+    list.innerHTML = '<div class="history-empty">No conversations yet</div>';
+    return;
+  }
+  list.innerHTML = chatHistory.map(chat => {
+    const ago = getTimeAgo(chat.time);
+    return `
+      <div class="history-item" onclick="continueChat(${chat.id})">
+        <div class="history-item-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        </div>
+        <div class="history-item-content">
+          <div class="history-item-text">${chat.userText}</div>
+          <div class="history-item-reply">${chat.agentText}</div>
+        </div>
+        <span class="history-item-time">${ago}</span>
+      </div>`;
+  }).join('');
+}
+
+function getTimeAgo(date) {
+  const mins = Math.floor((Date.now() - date.getTime()) / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return mins + 'm ago';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  return Math.floor(hrs / 24) + 'd ago';
+}
+
+function toggleHistory() {
+  const overlay = document.getElementById('historyOverlay');
+  overlay.classList.toggle('visible');
+  if (overlay.classList.contains('visible')) renderHistory();
+}
+
+function continueChat(chatId) {
+  const chat = chatHistory.find(c => c.id === chatId);
+  if (!chat) return;
+  toggleHistory();
+  setState('speaking');
+  const transcript = document.getElementById('transcript');
+  transcript.innerHTML = `
+    <div class="bubble user">${chat.userText}</div>
+    <div class="bubble agent">${chat.agentText}</div>`;
+  scrollTranscript();
+}
+
+function startNewChat() {
+  toggleHistory();
+  setState('idle');
+}
+
+// ── Init ──
+buildChips();
+drawOrb();
+</script>
+</body>
+</html>
